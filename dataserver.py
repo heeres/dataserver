@@ -68,10 +68,10 @@ class DataGroup(object):
     Can be indexed to get sub-groups or sets.
     '''
 
-    def __init__(self, h5f):
+    def __init__(self, h5f, path):
         self._h5f = h5f
-        groupname = h5f.file.filename + h5f.name
-        dataserv._register(groupname, self)
+        self.path = path
+        dataserv._register(path, self)
 
     def __getitem__(self, key):
         val = self._h5f[key]
@@ -83,7 +83,7 @@ class DataGroup(object):
 
         # Create a proxy
         if isinstance(val, h5py.Group):
-            val = DataGroup(val)
+            val = DataGroup(val, self.path+(key,))
         elif isinstance(val, h5py.Dataset):
             val = DataSet(val, self)
         else:
@@ -104,13 +104,15 @@ class DataGroup(object):
         Emit changed signal through objectsharer.
         '''
         self.emit('changed', key)
+        dataserv.emit('path changed', self.path + (key,))
 
     def create_group(self, key):
         '''
         Create a new sub group.
         '''
         g = self._h5f.create_group(key)
-        return DataGroup(g)
+        self.emit('group added')
+        return DataGroup(g, self.path+(key,))
 
     def create_dataset(self, name, shape=None, dtype=None, data=None, **kwargs):
         '''
@@ -119,6 +121,7 @@ class DataGroup(object):
         ds = self._h5f.create_dataset(name, shape=shape, dtype=dtype, data=data)
         ds = DataSet(ds, self)
         ds.set_attrs(**kwargs)
+        self.emit_changed(key=name)
         return ds
 
     def keys(self):
@@ -139,6 +142,9 @@ class DataGroup(object):
         for k, v in self._h5f.attrs.iteritems():
             ret[k] = v
         return ret
+
+    def close(self):
+        dataserv.remove_file(self.path[0])
 
 class DataServer(object):
     '''
@@ -173,10 +179,22 @@ class DataServer(object):
                 return None
             f = h5py.File(fn, 'a')
             self._hdf5_files[fn] = f
-            dg = DataGroup(f)
+            dg = DataGroup(f, path=(fn,))
+            self.emit('file added', fn)
+            logging.debug('file opened ' + str(f))
+        else:
+            logging.debug('file found ' + str(f))
 
-        groupname = f.filename + '/'
-        return self._datagroups[groupname]
+        #groupname = f.filename + '/'
+        return self._datagroups[(fn,)]
+
+    def remove_file(self, fn):
+        logging.debug('removing file ' + fn)
+        self._hdf5_files[fn].close()
+        del self._hdf5_files[fn]
+        for path in self._datagroups.keys():
+            if path[0] == fn:
+                del self._datagroups[path]
 
     def get_data(self, fn, group, create=False):
         '''
