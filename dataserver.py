@@ -21,6 +21,7 @@ import logging
 import objectsharer as objsh
 import time
 import h5py
+import numpy as np
 
 #NOTE: the emit functions are provided by objectsharer after calling register()
 
@@ -61,6 +62,20 @@ class DataSet(object):
             ret[k] = v
         return ret
 
+    def append(self, data):
+        new_shape = list(self._h5f.shape[0])
+        new_shape[0] += 1
+        self._h5f.resize(new_shape)
+        data = np.array(data)
+        if len(data.shape) == 0:
+            self._h5f[-1] = data
+        elif len(data.shape) == 1:
+            self._h5f[-1, :] = data
+        else:
+            raise ValueError("Can't append data of shape" + str(data.shape))
+
+
+
 class DataGroup(object):
     '''
     Shareable wrapper for HDF5 data group objects.
@@ -92,7 +107,11 @@ class DataGroup(object):
         return val
 
     def __setitem__(self, key, val):
-        self._h5f[key] = val
+        if key in self._h5f:
+            # Resize?
+            self._h5f[key][:] = val
+        else:
+            self._h5f[key] = val
         self.emit_changed(key)
 
     def __delitem__(self, key):
