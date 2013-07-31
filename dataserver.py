@@ -189,7 +189,11 @@ class DataServer(object):
 dataserv = DataServer()
 objsh.register(dataserv, name='dataserver')
 
-zbe = objsh.ZMQBackend()
-zbe.start_server(addr='127.0.0.1', port=55556)
-zbe.main_loop()
+def start():
+    zbe = objsh.ZMQBackend()
+    zbe.start_server(addr='127.0.0.1', port=55556)
+    zbe.main_loop()
+
+if __name__ == "__main__":
+    start()
 
