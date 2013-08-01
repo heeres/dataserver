@@ -85,8 +85,8 @@ class DataGroup(object):
 
     def __init__(self, h5f):
         self._h5f = h5f
-        self.groupname = h5f.file.filename + h5f.name
-        dataserv._register(self.groupname, self)
+        groupname = h5f.file.filename + h5f.name
+        dataserv._register(groupname, self)
 
     def __getitem__(self, key):
         val = self._h5f[key]
@@ -123,10 +123,10 @@ class DataGroup(object):
         Emit changed signal through objectsharer.
         '''
         self.emit('changed', key)
-        groupname = self.groupname
+        name = self._h5f.name
         if key is not None:
-            groupname += "/" + key
-        dataserv.emit('data_changed', groupname)
+            name += "/" + key
+        dataserv.emit('data_changed', self._h5f.file.filename, name)
 
     def create_group(self, key):
         '''
