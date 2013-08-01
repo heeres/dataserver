@@ -63,7 +63,7 @@ class DataSet(object):
         return ret
 
     def append(self, data):
-        new_shape = list(self._h5f.shape[0])
+        new_shape = list(self._h5f.shape)
         new_shape[0] += 1
         self._h5f.resize(new_shape)
         data = np.array(data)
@@ -136,11 +136,16 @@ class DataGroup(object):
         self.emit('group_added')
         return DataGroup(g)
 
-    def create_dataset(self, name, shape=None, dtype=None, data=None, **kwargs):
+    def create_dataset(self, name, shape=None, dtype=np.float64, data=None, rank=None, **kwargs):
         '''
         Create a new dataset and return it.
         '''
-        ds = self._h5f.create_dataset(name, shape=shape, dtype=dtype, data=data)
+        maxshape = None
+        if rank is not None:
+            maxshape = (None,) * rank
+            if shape is None:
+                shape = (0,) * rank
+        ds = self._h5f.create_dataset(name, shape=shape, dtype=dtype, data=data, maxshape=maxshape)
         ds = DataSet(ds, self)
         ds.set_attrs(**kwargs)
         self.emit_changed(key=name)
