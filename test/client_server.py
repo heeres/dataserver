@@ -16,10 +16,11 @@ class ClientServerTestCase(unittest.TestCase):
             print 'Deleting', f
             os.remove(f)
         time.sleep(.5)
+        self.server_client = ds.dataserver_client()
 
     def tearDown(self):
-        if self.server_process.is_alive():
-            self.server_process.terminate()
+        self.server_client.quit(async=True)
+        self.server_process.join()
 
     def testDataPersistence(self):
         c1 = ds.dataserver_client()
@@ -34,6 +35,17 @@ class ClientServerTestCase(unittest.TestCase):
         f1.close()
         f3 = h5py.File(os.path.join(ds.DATA_DIRECTORY, filename), 'r')
         assert all(data == f3['data'][:]), 'data failed to match from %s h5py file'
+        self.server_process.terminate()
+
+    def testAppendData(self):
+        c1 = ds.dataserver_client()
+        filename = 'test_append_data.h5'
+        f1 = c1.get_file(filename)
+        f1.create_dataset('data', rank=1)
+        data = np.random.normal(size=(5,))
+        for pt in data:
+            f1['data'].append(pt)
+        assert all(data == f1['data'][:]), "data %s doesn't match filedata %s" % (data, f1['data'][:])
 
 if __name__ == "__main__":
     unittest.main()
