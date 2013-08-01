@@ -57,10 +57,7 @@ class DataSet(object):
         '''
         Get HDF5 attributes.
         '''
-        ret = {}
-        for k, v in self._h5f.attrs.iteritems():
-            ret[k] = v
-        return ret
+        return dict(self._h5f.attrs)
 
     def append(self, data):
         new_shape = list(self._h5f.shape)
@@ -125,8 +122,10 @@ class DataGroup(object):
         self.emit('changed', key)
         name = self._h5f.name
         if key is not None:
-            name += "/" + key
-        dataserv.emit('data_changed', self._h5f.file.filename, name)
+            if not name.endswith("/"):
+                name += "/"
+            name += key
+        dataserv.emit('data-changed', self._h5f.file.filename, name)
 
     def create_group(self, key):
         '''
@@ -171,7 +170,7 @@ class DataGroup(object):
         return ret
 
     def close(self):
-        dataserv.remove_file(self.path[0])
+        dataserv.remove_file(self._h5f.file.filename)
 
 class DataServer(object):
     '''
@@ -207,14 +206,13 @@ class DataServer(object):
             f = h5py.File(fn, 'a')
             self._hdf5_files[fn] = f
             dg = DataGroup(f)
-            self.emit('file added', fn)
+            self.emit('file-added', fn)
         groupname = f.filename + '/'
         return self._datagroups[groupname]
 
     def remove_file(self, fn):
         logging.debug('removing file ' + fn)
-        self._hdf5_files[fn].close()
-        del self._hdf5_files[fn]
+        self._hdf5_files.pop(fn).close()
         for name in self._datagroups.keys():
             if name.split('/')[0] == fn:
                 del self._datagroups[name]
@@ -226,6 +224,10 @@ class DataServer(object):
         fullname = fn + group
         dg = self._datagroups.get(fullname, None)
         return dg
+
+    def quit(self):
+        import sys
+        sys.exit()
 
 dataserv = DataServer()
 objsh.register(dataserv, name='dataserver')
