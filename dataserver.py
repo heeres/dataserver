@@ -211,6 +211,13 @@ class DataServer(object):
         groupname = f.filename + '/'
         return self._datagroups[groupname]
 
+    def list_files(self, names_only=True):
+        files = self._hdf5_files.iterkeys()
+        if names_only:
+            return files
+        else:
+            return {f: self._datagroups[f + '/'] for f in files}
+
     def remove_file(self, fn):
         logging.debug('removing file ' + fn)
         self._hdf5_files.pop(fn).close()
