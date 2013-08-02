@@ -52,6 +52,7 @@ class DataSet(object):
         '''
         for k, v in kwargs.iteritems():
             self._h5f.attrs[k] = v
+        self.emit('attrs-changed', kwargs)
 
     def get_attrs(self):
         '''
@@ -125,14 +126,13 @@ class DataGroup(object):
             if not name.endswith("/"):
                 name += "/"
             name += key
-        dataserv.emit('data-changed', self._h5f.file.filename, name)
 
     def create_group(self, key):
         '''
         Create a new sub group.
         '''
         g = self._h5f.create_group(key)
-        self.emit('group_added')
+        self.emit('group-added')
         return DataGroup(g)
 
     def create_dataset(self, name, shape=None, dtype=np.float64, data=None, rank=None, **kwargs):
@@ -162,6 +162,7 @@ class DataGroup(object):
     def set_attrs(self, **kwargs):
         for k, v in kwargs.iteritems():
             self._h5f.attrs[k] = v
+        self.emit('attrs-changed', kwargs)
 
     def get_attrs(self):
         ret = {}
