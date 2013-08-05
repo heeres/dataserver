@@ -234,16 +234,24 @@ class DataServer(object):
         return dg
 
     def quit(self):
+        for file in self._hdf5_files.values():
+            file.close()
         import sys
         sys.exit()
+
+    def hello(self):
+        return "hello"
 
 dataserv = DataServer()
 objsh.register(dataserv, name='dataserver')
 
-def start():
+def start(qt=False):
     zbe = objsh.ZMQBackend()
     zbe.start_server(addr='127.0.0.1', port=55556)
-    zbe.main_loop()
+    if qt:
+        zbe.add_qt_timer(10)
+    else:
+        zbe.main_loop()
 
 if __name__ == "__main__":
     start()
