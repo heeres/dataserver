@@ -235,7 +235,8 @@ class DataServer(object):
 
     def quit(self):
         for file in self._hdf5_files.values():
-            file.close()
+            if file.id:
+                file.close()
         import sys
         sys.exit()
 
