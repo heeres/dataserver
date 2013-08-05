@@ -45,6 +45,7 @@ class DataSet(object):
     def __setitem__(self, idx, val):
         self._h5f[idx] = val
         self._group.emit_changed(self._name)
+        self._h5f.file.flush()
 
     def set_attrs(self, **kwargs):
         '''
@@ -110,6 +111,7 @@ class DataGroup(object):
             self._h5f[key][:] = val
         else:
             self._h5f[key] = val
+        self._h5f.file.flush()
         self.emit_changed(key)
 
     def __delitem__(self, key):
