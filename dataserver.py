@@ -44,8 +44,8 @@ class DataSet(object):
 
     def __setitem__(self, idx, val):
         self._h5f[idx] = val
+        self.flush()
         self._group.emit_changed(self._name)
-        self._h5f.file.flush()
 
     def set_attrs(self, **kwargs):
         '''
@@ -53,6 +53,7 @@ class DataSet(object):
         '''
         for k, v in kwargs.iteritems():
             self._h5f.attrs[k] = v
+        self.flush()
         self.emit('attrs-changed', kwargs)
 
     def get_attrs(self):
@@ -72,6 +73,10 @@ class DataSet(object):
             self._h5f[-1, :] = data
         else:
             raise ValueError("Can't append data of shape" + str(data.shape))
+        self.flush()
+
+    def flush(self):
+        self._h5f.file.flush()
 
 
 
@@ -111,11 +116,12 @@ class DataGroup(object):
             self._h5f[key][:] = val
         else:
             self._h5f[key] = val
-        self._h5f.file.flush()
+        self.flush()
         self.emit_changed(key)
 
     def __delitem__(self, key):
         del self._h5f[key]
+        self.flush()
         self.emit('removed', key)
 
     def emit_changed(self, key=None):
@@ -123,17 +129,13 @@ class DataGroup(object):
         Emit changed signal through objectsharer.
         '''
         self.emit('changed', key)
-        name = self._h5f.name
-        if key is not None:
-            if not name.endswith("/"):
-                name += "/"
-            name += key
 
     def create_group(self, key):
         '''
         Create a new sub group.
         '''
         g = self._h5f.create_group(key)
+        self.flush()
         self.emit('group-added')
         return DataGroup(g)
 
@@ -148,7 +150,7 @@ class DataGroup(object):
                 shape = (0,) * rank
         ds = self._h5f.create_dataset(name, shape=shape, dtype=dtype, data=data, maxshape=maxshape)
         ds = DataSet(ds, self)
-        ds.set_attrs(**kwargs)
+        ds.set_attrs(**kwargs)      # This will flush
         self.emit_changed(key=name)
         return ds
 
@@ -159,11 +161,12 @@ class DataGroup(object):
         return self._h5f.keys()
 
     def flush(self):
-        self._h5f.flush()
+        self._h5f.file.flush()
 
     def set_attrs(self, **kwargs):
         for k, v in kwargs.iteritems():
             self._h5f.attrs[k] = v
+        self.flush()
         self.emit('attrs-changed', kwargs)
 
     def get_attrs(self):
@@ -174,6 +177,8 @@ class DataGroup(object):
 
     def close(self):
         dataserv.remove_file(self._h5f.file.filename)
+
+
 
 class DataServer(object):
     '''
@@ -214,7 +219,7 @@ class DataServer(object):
         return self._datagroups[groupname]
 
     def list_files(self, names_only=True):
-        files = self._hdf5_files.iterkeys()
+        files = self._hdf5_files.keys()
         if names_only:
             return files
         else:
