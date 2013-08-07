@@ -17,7 +17,7 @@
 
 import os
 import logging
-#logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.INFO)
 import objectsharer as objsh
 import time
 import h5py
@@ -241,6 +241,7 @@ class DataServer(object):
         return dg
 
     def quit(self):
+        logging.info('Closing files...')
         for file in self._hdf5_files.values():
             if file.id:
                 file.close()
@@ -259,6 +260,9 @@ def start(qt=False):
     if qt:
         zbe.add_qt_timer(10)
     else:
+        import signal
+        for sig in (signal.SIGABRT, signal.SIGINT, signal.SIGTERM):
+            signal.signal(sig, lambda *args: dataserv.quit())
         zbe.main_loop()
 
 if __name__ == "__main__":
