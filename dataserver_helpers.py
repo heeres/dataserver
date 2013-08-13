@@ -13,7 +13,7 @@ def get_file(filename, **kwargs):
     return c.get_file(filename)
 
 def run_dataserver(qt=False):
-    import dataserver
+    from dataserver.dataserver import start
     import os
     os.chdir(DATA_DIRECTORY)
-    dataserver.start(qt)
+    start(qt)

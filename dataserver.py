@@ -266,5 +266,8 @@ def start(qt=False):
         zbe.main_loop()
 
 if __name__ == "__main__":
+    import os
+    from dataserver_helpers import DATA_DIRECTORY
+    os.chdir(DATA_DIRECTORY)
     start()
 
