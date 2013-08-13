@@ -1,3 +1,4 @@
+import time
 DATA_DIRECTORY = r'C:\_Data'
 
 def dataserver_client(serveraddr='127.0.0.1', serverport=55556, localaddr='127.0.0.1'):
@@ -8,9 +9,17 @@ def dataserver_client(serveraddr='127.0.0.1', serverport=55556, localaddr='127.0
         zbe.connect_to('tcp://%s:%d' % (serveraddr, serverport))  # Data server
     return objsh.helper.find_object('dataserver')
 
-def get_file(filename, **kwargs):
+def get_file(filename, timestamp_group=False, **kwargs):
     c = dataserver_client()
-    return c.get_file(filename)
+    f = c.get_file(filename)
+    if timestamp_group:
+        date = time.strftime('%y-%m-%d')
+        if date in f:
+            f = f[date]
+        else:
+            f = f.create_group()
+        f = f.create_group(time.strftime('%H:%M:%S'))
+    return f
 
 def run_dataserver(qt=False):
     from dataserver.dataserver import start
