@@ -40,11 +40,16 @@ class DataSet(object):
         dataserv._register(fullname, self)
 
     def __getitem__(self, idx):
+        if self._h5f.shape[0] == 0 and idx == slice(None, None, None):
+            return np.array([])
         return self._h5f[idx]
 
     def __setitem__(self, idx, val):
         self._h5f[idx] = val
         self.flush()
+        self.emit_changed()
+
+    def emit_changed(self):
         self._group.emit_changed(self._name)
 
     def set_attrs(self, **kwargs):
@@ -65,15 +70,17 @@ class DataSet(object):
     def append(self, data):
         new_shape = list(self._h5f.shape)
         new_shape[0] += 1
+        if len(new_shape) > 1 and new_shape[1] == 0:
+            new_shape[1] = len(data)
         self._h5f.resize(new_shape)
+
         data = np.array(data)
         if len(data.shape) == 0:
-            self._h5f[-1] = data
+            self[-1] = data
         elif len(data.shape) == 1:
-            self._h5f[-1, :] = data
+            self[-1, :] = data
         else:
             raise ValueError("Can't append data of shape" + str(data.shape))
-        self.flush()
 
     def flush(self):
         self._h5f.file.flush()
@@ -136,7 +143,7 @@ class DataGroup(object):
         '''
         g = self._h5f.create_group(key)
         self.flush()
-        self.emit('group-added')
+        self.emit('group-added', key)
         return DataGroup(g)
 
     def create_dataset(self, name, shape=None, dtype=np.float64, data=None, rank=None, **kwargs):
@@ -148,10 +155,10 @@ class DataGroup(object):
             maxshape = (None,) * rank
             if shape is None:
                 shape = (0,) * rank
+
         ds = self._h5f.create_dataset(name, shape=shape, dtype=dtype, data=data, maxshape=maxshape)
         ds = DataSet(ds, self)
         ds.set_attrs(**kwargs)      # This will flush
-        self.emit_changed(key=name)
         return ds
 
     def keys(self):
@@ -197,6 +204,9 @@ class DataServer(object):
         '''
         objsh.register(datagroup)
         self._datagroups[name] = datagroup
+
+    def _unregister(self, name):
+        objsh.helper.unregister(self._datagroups.pop(name))
 
     def __getitem__(self, name):
         return self.get_file(name)
