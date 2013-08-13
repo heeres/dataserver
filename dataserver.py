@@ -131,6 +131,9 @@ class DataGroup(object):
         self.flush()
         self.emit('removed', key)
 
+    def __contains__(self, item):
+        return item in self._h5f
+
     def emit_changed(self, key=None):
         '''
         Emit changed signal through objectsharer.
