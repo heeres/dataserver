@@ -9,16 +9,20 @@ def dataserver_client(serveraddr='127.0.0.1', serverport=55556, localaddr='127.0
         zbe.connect_to('tcp://%s:%d' % (serveraddr, serverport))  # Data server
     return objsh.helper.find_object('dataserver')
 
-def get_file(filename, timestamp_group=False, **kwargs):
+def get_file(filename, groupname="", timestamp_group=False, **kwargs):
+    if not (filename.endswith('.h5') or filename.endswith('.hdf5')):
+        filename += '.h5'
     c = dataserver_client()
     f = c.get_file(filename)
+    if groupname:
+        groupname = ":" + groupname
     if timestamp_group:
         date = time.strftime('%y-%m-%d')
         if date in f:
             f = f[date]
         else:
             f = f.create_group(date)
-        f = f.create_group(time.strftime('%H:%M:%S'))
+        f = f.create_group(time.strftime('%H:%M:%S' + groupname))
     return f
 
 def run_dataserver(qt=False):
