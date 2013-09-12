@@ -30,9 +30,11 @@ g.connect('changed', lambda key: group_changed_cb(key, group=g))
 g['xs2'] = xs**2
 data = g.create_dataset('averaged', shape=(1001,1001), dtype=np.float)
 data[:] = ZS
-#data.set_attrs(done=True)
 end = time.time()
 print 'Sent in %.03f sec' % (end - start,)
+data.set_attrs(done=True)
+
+aslice = data[0,:]
 
 zbe.add_qt_timer()
 
