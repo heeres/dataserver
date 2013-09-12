@@ -163,8 +163,14 @@ class DataGroup(object):
 
     def __setitem__(self, key, val):
         if key in self._h5f:
-            # Resize?
-            self._h5f[key][:] = val
+            if val.shape != self._h5f[key].shape:
+                del self._h5f[key]
+                self._h5f[key] = val
+                fullname = self._h5f.file.filename + self._h5f[key].name
+                if fullname in dataserv._datagroups:
+                    dataserv._datagroups[fullname]._h5f = self._h5f[key]
+            else:
+                self._h5f[key][:] = val
         else:
             self._h5f[key] = val
         self.flush()
