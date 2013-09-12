@@ -67,24 +67,68 @@ class DataSet(object):
         '''
         return dict(self._h5f.attrs)
 
-    def append(self, data):
+    def get_xpts(self):
+        x0 = self._h5f.attrs['x0']
+        xscale = self._h5f.attrs['xscale']
+        npts = len(self._h5f)
+        x1 = x0 + xscale * (npts - 1)
+        return np.linspace(x0, x1, npts)
+
+    def get_ypts(self):
+        y0 = self._h5f.attrs['y0']
+        yscale = self._h5f.attrs['yscale']
+        npts = self._h5f.shape[1]
+        y1 = y0 + yscale * (npts - 1)
+        return np.linspace(y0, y1, npts)
+
+    def get_extent(self):
+        """
+        Return the boundaries of the dataset. (x0, x1) if rank 1. (x0, x1, y0, y1) if rank 2
+        """
+        x0 = self._h5f.attrs['x0']
+        xscale = self._h5f.attrs['xscale']
+        x1 = x0 + xscale*(self._h5f.shape[0] - 1)
+
+        if 'y0' in self._h5f.attrs:
+            y0 = self._h5f.attrs['y0']
+            yscale = self._h5f.attrs['yscale']
+            y1 = y0 + yscale*(self._h5f.shape[1]-1)
+            return x0, x1, y0, y1
+
+        return x0, x1
+
+    def set_extent(self, x0, x1, y0=None, y1=None):
+        """
+        Use the current dataset shape to infer the scale parameter given the boundaries
+        """
+        xscale = (x1 - x0) / (self._h5f.shape[0] - 1)
+        self.set_attrs(x0=x0, x1=x1, xscale=xscale)
+        if y0 is not None:
+            yscale = (y1 - y0) / (self._h5f.shape[1] - 1)
+        self.set_attrs(y0=y0, y1=y1, yscale=yscale)
+
+    def extend(self, data):
+        data = np.array(data)
         new_shape = list(self._h5f.shape)
-        new_shape[0] += 1
+        new_shape[0] += data.shape[0]
+
         if len(new_shape) > 1 and new_shape[1] == 0:
-            new_shape[1] = len(data)
+            for i, s in enumerate(data.shape[1:]):
+                new_shape[i+1] = s
+
+        assert all(i == j for i, j in zip(new_shape[1:], data.shape[1:])), \
+            "incompatible shapes %s, %s" % (self._h5f.shape, data.shape)
+
         self._h5f.resize(new_shape)
 
         data = np.array(data)
-        if len(data.shape) == 0:
-            self[-1] = data
-        elif len(data.shape) == 1:
-            self[-1, :] = data
-        else:
-            raise ValueError("Can't append data of shape" + str(data.shape))
+        self[-data.shape[0]:] = data
+
+    def append(self, data):
+        self.extend([data])
 
     def flush(self):
         self._h5f.file.flush()
-
 
 
 class DataGroup(object):
