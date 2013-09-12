@@ -35,9 +35,7 @@ class DataSet(object):
         self._h5f = h5f
         self._group = group
         self._name = h5f.name.split('/')[-1]
-
-        fullname = h5f.file.filename + h5f.name
-        dataserv._register(fullname, self)
+        dataserv._register(self.get_fullname(), self)
 
     def __getitem__(self, idx):
         if self._h5f.shape[0] == 0 and idx == slice(None, None, None):
@@ -49,6 +47,9 @@ class DataSet(object):
         self.flush()
         self.emit_changed()
 
+    def get_fullname(self):
+        return self._h5f.file.filename + self._h5f.name
+        
     def emit_changed(self):
         self._group.emit_changed(self._name)
 
@@ -96,8 +97,7 @@ class DataGroup(object):
 
     def __init__(self, h5f):
         self._h5f = h5f
-        groupname = h5f.file.filename + h5f.name
-        dataserv._register(groupname, self)
+        dataserv._register(self.get_fullname(), self)
 
     def __getitem__(self, key):
         val = self._h5f[key]
@@ -133,6 +133,9 @@ class DataGroup(object):
 
     def __contains__(self, item):
         return item in self._h5f
+
+    def get_fullname(self):
+        return self._h5f.file.filename + self._h5f.name
 
     def emit_changed(self, key=None):
         '''
@@ -264,6 +267,7 @@ class DataServer(object):
     def hello(self):
         return "hello"
 
+logging.info('Starting data server...')
 dataserv = DataServer()
 objsh.register(dataserv, name='dataserver')
 
