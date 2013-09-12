@@ -22,6 +22,7 @@ import objectsharer as objsh
 import time
 import h5py
 import numpy as np
+import types
 
 #NOTE: the emit functions are provided by objectsharer after calling register()
 
@@ -38,11 +39,15 @@ class DataSet(object):
         dataserv._register(self.get_fullname(), self)
 
     def __getitem__(self, idx):
+        if type(idx) is types.ListType:
+            idx = tuple(idx)
         if self._h5f.shape[0] == 0 and idx == slice(None, None, None):
             return np.array([])
         return self._h5f[idx]
 
     def __setitem__(self, idx, val):
+        if type(idx) is types.ListType:
+            idx = tuple(idx)
         self._h5f[idx] = val
         self.flush()
         self.emit_changed()
