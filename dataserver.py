@@ -50,13 +50,13 @@ class DataSet(object):
             idx = tuple(idx)
         self._h5f[idx] = val
         self.flush()
-        self.emit_changed()
+        self.emit_changed(_slice=idx)
 
     def get_fullname(self):
         return self._h5f.file.filename + self._h5f.name
         
-    def emit_changed(self):
-        self._group.emit_changed(self._name)
+    def emit_changed(self, _slice=None):
+        self._group.emit_changed(self._name, _slice=_slice)
 
     def set_attrs(self, **kwargs):
         '''
@@ -126,6 +126,7 @@ class DataSet(object):
             "incompatible shapes %s, %s" % (self._h5f.shape, data.shape)
 
         self._h5f.resize(new_shape)
+        self.emit("resize", new_shape)
 
         data = np.array(data)
         self[-data.shape[0]:] = data
@@ -192,11 +193,11 @@ class DataGroup(object):
     def get_fullname(self):
         return self._h5f.file.filename + self._h5f.name
 
-    def emit_changed(self, key=None):
+    def emit_changed(self, key=None, _slice=None):
         '''
         Emit changed signal through objectsharer.
         '''
-        self.emit('changed', key)
+        self.emit('changed', key, _slice)
 
     def create_group(self, key):
         '''
