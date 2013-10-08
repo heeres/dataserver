@@ -168,6 +168,8 @@ class DataGroup(object):
         return val
 
     def __setitem__(self, key, val):
+        if isinstance(val, list):
+            val = np.array(val)
         if key in self._h5f:
             if val.shape != self._h5f[key].shape:
                 del self._h5f[key]
@@ -278,6 +280,7 @@ class DataServer(object):
         Return a data object for file <fn>.
         If <open> == True (default), open the file in not yet opened.
         '''
+        fn = os.path.abspath(fn)
         f = self._hdf5_files.get(fn, None)
 
         if f is None:
@@ -298,6 +301,7 @@ class DataServer(object):
             return {f: self._datagroups[f + '/'] for f in files}
 
     def remove_file(self, fn):
+        fn = os.path.abspath(fn)
         logging.debug('removing file ' + fn)
         self._hdf5_files.pop(fn).close()
         for name in self._datagroups.keys():
