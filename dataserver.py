@@ -195,6 +195,16 @@ class DataGroup(object):
     def get_fullname(self):
         return self._h5f.file.filename + self._h5f.name
 
+    def get_numbered_child(self):
+        max_n = 0
+        for k in self.keys():
+            try:
+                n = int(k)
+                max_n = max(n, max_n)
+            except ValueError:
+                pass
+        return self.create_group(str(max_n+1))
+
     def emit_changed(self, key=None, _slice=None):
         '''
         Emit changed signal through objectsharer.
@@ -206,9 +216,17 @@ class DataGroup(object):
         Create a new sub group.
         '''
         g = self._h5f.create_group(key)
+        timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+        g.attrs['timestamp'] = timestamp
         self.flush()
         self.emit('group-added', key)
         return DataGroup(g)
+
+    def get_group(self, key):
+        if key in self:
+            return self[key]
+        else:
+            return self.create_group(key)
 
     def create_dataset(self, name, shape=None, dtype=np.float64, data=None, rank=None, **kwargs):
         '''
