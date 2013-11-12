@@ -17,6 +17,8 @@
 
 import os
 import logging
+from shutil import copyfile
+
 logging.getLogger().setLevel(logging.INFO)
 import objectsharer as objsh
 import time
@@ -170,7 +172,7 @@ class DataGroup(object):
     def __setitem__(self, key, val):
         if isinstance(val, list):
             val = np.array(val)
-        if key in self._h5f:
+        if key in self._h5f and isinstance(val, np.ndarray):
             if val.shape != self._h5f[key].shape:
                 del self._h5f[key]
                 self._h5f[key] = val
@@ -179,6 +181,9 @@ class DataGroup(object):
                     dataserv._datagroups[fullname]._h5f = self._h5f[key]
             else:
                 self._h5f[key][:] = val
+        elif isinstance(val, DataSet):
+            print val._name
+            self._h5f[key] = val._h5f
         else:
             self._h5f[key] = val
         self.flush()
@@ -267,7 +272,19 @@ class DataGroup(object):
     def close(self):
         dataserv.remove_file(self._h5f.file.filename)
 
-
+def check_backup(fn):
+    if not os.path.exists(fn):
+        return
+    datestr = time.strftime("_%Y%m%d") + '.h5'
+    path_minus_drive = os.path.splitdrive(fn)[1]
+    relpath_minus_drive = path_minus_drive[1:] # Remove initial slash
+    relpath_with_datestr = relpath_minus_drive.split('.h5')[0] + datestr + '.h5'
+    backup_file = os.path.join(r'C:\_DataBackup', relpath_with_datestr)
+    if not os.path.exists(backup_file):
+        dirname = os.path.dirname(backup_file)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        copyfile(fn, backup_file)
 
 class DataServer(object):
     '''
@@ -299,6 +316,7 @@ class DataServer(object):
         If <open> == True (default), open the file in not yet opened.
         '''
         fn = os.path.abspath(fn)
+        check_backup(fn)
         f = self._hdf5_files.get(fn, None)
 
         if f is None:

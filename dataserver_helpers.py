@@ -30,3 +30,10 @@ def run_dataserver(qt=False):
     import os
     os.chdir(DATA_DIRECTORY)
     start(qt)
+
+
+def resolve_file(filename, path):
+    file = get_file(filename)
+    for group in path.split('/'):
+        file = file.get_group(group)
+    return file.get_numbered_child()
