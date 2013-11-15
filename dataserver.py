@@ -89,6 +89,9 @@ class DataSet(object):
         y1 = y0 + yscale * (npts - 1)
         return np.linspace(y0, y1, npts)
 
+    def get_shape(self):
+        return self._h5f.shape
+
     def get_extent(self):
         """
         Return the boundaries of the dataset. (x0, x1) if rank 1. (x0, x1, y0, y1) if rank 2
@@ -174,11 +177,14 @@ class DataGroup(object):
             val = np.array(val)
         if key in self._h5f and isinstance(val, np.ndarray):
             if val.shape != self._h5f[key].shape:
+                attrs = dict(self._h5f[key].attrs)
                 del self._h5f[key]
                 self._h5f[key] = val
                 fullname = self._h5f.file.filename + self._h5f[key].name
                 if fullname in dataserv._datagroups:
                     dataserv._datagroups[fullname]._h5f = self._h5f[key]
+                for k, v in attrs.items():
+                    self._h5f[key].attrs[k] = v
             else:
                 self._h5f[key][:] = val
         elif isinstance(val, DataSet):
