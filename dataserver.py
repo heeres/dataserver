@@ -387,6 +387,9 @@ def start(qt=False):
 if __name__ == "__main__":
     import os
     from dataserver_helpers import DATA_DIRECTORY
-    os.chdir(DATA_DIRECTORY)
+    try:
+        os.chdir(DATA_DIRECTORY)
+    except:
+        pass
     start()
 
