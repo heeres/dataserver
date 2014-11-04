@@ -73,7 +73,8 @@ class DataSet(object):
         '''
         Get HDF5 attributes.
         '''
-        return dict(self._h5f.attrs)
+        scale_attrs = ('DIMENSION_SCALE', 'DIMENSION_LIST', 'CLASS', 'NAME', 'REFERENCE_LIST')
+        return {k:self._h5f.attrs[k] for k in self._h5f.attrs if k not in scale_attrs}
 
     def get_xpts(self):
         x0 = self._h5f.attrs['x0']
@@ -120,6 +121,7 @@ class DataSet(object):
 
     def extend(self, data):
         data = np.array(data)
+        old_shape = self._h5f.shape
         new_shape = list(self._h5f.shape)
         new_shape[0] += data.shape[0]
 
@@ -133,8 +135,7 @@ class DataSet(object):
         self._h5f.resize(new_shape)
         self.emit("resize", new_shape)
 
-        data = np.array(data)
-        self[-data.shape[0]:] = data
+        self[old_shape[0]:new_shape[0]] = data
 
     def append(self, data):
         self.extend([data])
@@ -188,7 +189,6 @@ class DataGroup(object):
             else:
                 self._h5f[key][:] = val
         elif isinstance(val, DataSet):
-            print val._name
             self._h5f[key] = val._h5f
         else:
             self._h5f[key] = val
@@ -277,6 +277,13 @@ class DataGroup(object):
 
     def close(self):
         dataserv.remove_file(self._h5f.file.filename)
+
+    def set_scale(self, xname, yname, dim=0, label=None):
+        if label is None:
+            label = xname
+        self._h5f[yname].dims.create_scale(self._h5f[xname], label)
+        self._h5f[yname].dims[dim].attach_scale(self._h5f[xname])
+
 
 def check_backup(fn):
     if not os.path.exists(fn):
