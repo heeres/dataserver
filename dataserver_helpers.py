@@ -30,7 +30,10 @@ def get_file(filename, groupname="", timestamp_group=False, **kwargs):
 def run_dataserver(qt=False):
     from dataserver import start
     import os
-    os.chdir(DATA_DIRECTORY)
+    try:
+        os.chdir(DATA_DIRECTORY)
+    except:
+        pass
     start(qt)
 
 
