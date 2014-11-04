@@ -43,8 +43,6 @@ class DataSet(object):
     def __getitem__(self, idx):
         if type(idx) is types.ListType:
             idx = tuple(idx)
-        if self._h5f.shape[0] == 0 and idx == slice(None, None, None):
-            return np.array([])
         return self._h5f[idx]
 
     def __setitem__(self, idx, val):
@@ -381,15 +379,18 @@ dataserv = DataServer()
 objsh.register(dataserv, name='dataserver')
 
 def start(qt=False):
-    zbe = objsh.ZMQBackend()
-    zbe.start_server(addr='127.0.0.1', port=55556)
+    if hasattr(objsh, 'ZMQBackend'):
+        backend = objsh.ZMQBackend()
+    else:
+        backend = objsh.backend
+    backend.start_server(addr='127.0.0.1', port=55556)
     if qt:
-        zbe.add_qt_timer(10)
+        backend.add_qt_timer(10)
     else:
         import signal
         for sig in (signal.SIGABRT, signal.SIGINT, signal.SIGTERM):
             signal.signal(sig, lambda *args: dataserv.quit())
-        zbe.main_loop()
+        backend.main_loop()
 
 if __name__ == "__main__":
     import os
