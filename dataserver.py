@@ -26,6 +26,13 @@ import h5py
 import numpy as np
 import types
 
+COMPLEX_TYPES = [np.complex, np.complex64, np.complex128]
+try:
+    COMPLEX_TYPES.append(np.complex256)
+except:
+    pass
+FLOAT_TYPES= (np.float, np.float16, np.float32, np.float64)
+
 #NOTE: the emit functions are provided by objectsharer after calling register()
 
 class DataSet(object):
@@ -48,6 +55,9 @@ class DataSet(object):
     def __setitem__(self, idx, val):
         if type(idx) is types.ListType:
             idx = tuple(idx)
+        if isinstance(val, np.ndarray):
+            if val.dtype in COMPLEX_TYPES and self._h5f.dtype not in COMPLEX_TYPES:
+                raise ValueError('Unable to store complex values in non-complex type')
         self._h5f[idx] = val
         self.flush()
         self.emit_changed(_slice=idx)
@@ -57,6 +67,9 @@ class DataSet(object):
         
     def emit_changed(self, _slice=None):
         self._group.emit_changed(self._name, _slice=_slice)
+
+    def get_dtype(self):
+        return self._h5f.dtype
 
     def set_attrs(self, **kwargs):
         '''
@@ -141,6 +154,11 @@ class DataSet(object):
     def flush(self):
         self._h5f.file.flush()
 
+    def release(self):
+        dataserv._unregister(self.get_fullname())
+        logging.debug('Released %s, %d data objects left', self.get_fullname(), len(dataserv._datagroups))
+        self._h5f = None
+        self._group = None
 
 class DataGroup(object):
     '''
@@ -237,15 +255,23 @@ class DataGroup(object):
         else:
             return self.create_group(key)
 
-    def create_dataset(self, name, shape=None, dtype=np.float64, data=None, rank=None, **kwargs):
+    def create_dataset(self, name, shape=None, dtype=None, data=None, rank=None, **kwargs):
         '''
         Create a new dataset and return it.
         '''
+
+        if type(name) not in (str, unicode):
+            raise Exception('Invalid dataset name')
+
         maxshape = None
         if rank is not None:
             maxshape = (None,) * rank
             if shape is None:
                 shape = (0,) * rank
+
+        if data is not None and dtype is not None:
+            if data.dtype in COMPLEX_TYPES and dtype not in COMPLEX_TYPES:
+                raise ValueError('Trying to store complex data in real data set')
 
         ds = self._h5f.create_dataset(name, shape=shape, dtype=dtype, data=data, maxshape=maxshape)
         ds = DataSet(ds, self)
@@ -282,6 +308,9 @@ class DataGroup(object):
         self._h5f[yname].dims.create_scale(self._h5f[xname], label)
         self._h5f[yname].dims[dim].attach_scale(self._h5f[xname])
 
+    def release(self):
+        dataserv._unregister(self.get_fullname())
+        self._h5f = None
 
 def check_backup(fn):
     if not os.path.exists(fn):
@@ -374,6 +403,10 @@ class DataServer(object):
     def hello(self):
         return "hello"
 
+def print_stats():
+    print 'Sharing %d data objects (objectsharer reports %d)' % (len(dataserv._datagroups), len(objsh.helper.objects))
+    return True
+
 logging.info('Starting data server...')
 dataserv = DataServer()
 objsh.register(dataserv, name='dataserver')
@@ -390,6 +423,7 @@ def start(qt=False):
         import signal
         for sig in (signal.SIGABRT, signal.SIGINT, signal.SIGTERM):
             signal.signal(sig, lambda *args: dataserv.quit())
+        backend.timeout_add(10000, print_stats)
         backend.main_loop()
 
 if __name__ == "__main__":
