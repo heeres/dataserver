@@ -28,6 +28,13 @@ import types
 
 #NOTE: the emit functions are provided by objectsharer after calling register()
 
+try:
+    import config
+    if hasattr(config, 'data_backup'):
+        BACKUP_DIR = config.data_backup
+except:
+    BACKUP_DIR = r'C:\_DataBackup'
+
 class DataSet(object):
     '''
     Shareable wrapper for HDF5 data sets.
@@ -54,7 +61,7 @@ class DataSet(object):
 
     def get_fullname(self):
         return self._h5f.file.filename + self._h5f.name
-        
+
     def emit_changed(self, _slice=None):
         self._group.emit_changed(self._name, _slice=_slice)
 
@@ -290,7 +297,7 @@ def check_backup(fn):
     path_minus_drive = os.path.splitdrive(fn)[1]
     relpath_minus_drive = path_minus_drive[1:] # Remove initial slash
     relpath_with_datestr = relpath_minus_drive.split('.h5')[0] + datestr + '.h5'
-    backup_file = os.path.join(r'C:\_DataBackup', relpath_with_datestr)
+    backup_file = os.path.join(BACKUP_DIR, relpath_with_datestr)
     if not os.path.exists(backup_file):
         dirname = os.path.dirname(backup_file)
         if not os.path.exists(dirname):
